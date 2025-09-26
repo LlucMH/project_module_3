@@ -1,0 +1,265 @@
+{
+	"info": {
+		"_postman_id": "bda563f5-c9a0-4b1e-99f3-3b8e099fdb0d",
+		"name": "MyRecipes",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "19714765",
+		"_collection_link": "https://none66-7207.postman.co/workspace/500187f5-b257-468d-8383-131d401c3807/collection/19714765-bda563f5-c9a0-4b1e-99f3-3b8e099fdb0d?action=share&source=collection_link&creator=19714765"
+	},
+	"item": [
+		{
+			"name": "Heath",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{FUNCTIONS_BASE}}/health",
+					"host": [
+						"{{FUNCTIONS_BASE}}"
+					],
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Listar recetas",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{REST_BASE}}/{{TABLE}}?select=*",
+					"host": [
+						"{{REST_BASE}}"
+					],
+					"path": [
+						"{{TABLE}}"
+					],
+					"query": [
+						{
+							"key": "select",
+							"value": "*"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Crear receta",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Prefer",
+						"value": "return=representation",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"title\": \"Prueba desde Postman\",\r\n  \"description\": \"Receta de prueba\",\r\n  \"tags\": [\"test\",\"postman\"],\r\n  \"instructions\": [\"Paso 1\",\"Paso 2\",\"Paso 3\",\"Paso 4\"],\r\n  \"prep_time_minutes\": 10,\r\n  \"servings\": 2\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{REST_BASE}}/{{TABLE}}",
+					"host": [
+						"{{REST_BASE}}"
+					],
+					"path": [
+						"{{TABLE}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Obtener por ID (detalle)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{REST_BASE}}/{{TABLE}}?id=eq.{{LAST_ID}}&select=*",
+					"host": [
+						"{{REST_BASE}}"
+					],
+					"path": [
+						"{{TABLE}}"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "eq.{{LAST_ID}}"
+						},
+						{
+							"key": "select",
+							"value": "*"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Actualizar",
+			"request": {
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Prefer",
+						"value": "return=representation",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"title\": \"Receta actualizada desde Postman\",\r\n  \"description\": \"Descripción actualizada\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{REST_BASE}}/{{TABLE}}?id=eq.{{LAST_ID}}",
+					"host": [
+						"{{REST_BASE}}"
+					],
+					"path": [
+						"{{TABLE}}"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "eq.{{LAST_ID}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Borrar",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{REST_BASE}}/{{TABLE}}?id=eq.{{LAST_ID}}",
+					"host": [
+						"{{REST_BASE}}"
+					],
+					"path": [
+						"{{TABLE}}"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "eq.{{LAST_ID}}"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
