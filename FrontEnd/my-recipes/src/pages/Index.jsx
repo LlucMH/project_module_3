@@ -1,70 +1,297 @@
-import { useEffect, useState, useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { useState, useMemo, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Plus, ChefHat } from "lucide-react";
+import { RecipeCard } from "@/components/RecipeCard";
+import { RecipeForm } from "@/components/RecipeForm";
+import { RecipeDetail } from "@/components/RecipeDetail";
+import { SearchBar } from "@/components/SearchBar";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+import { useToast } from "@/hooks/use-toast";
+import heroImage from "@/assets/hero-kitchen.jpg";
+
+// API
+import { listRecipes, getAllTags, deleteRecipe, upsertRecipe } from "@/api/recipes";
+
+const PAGE_SIZE = 12;
 
 export default function Index() {
-  const [recipes, setRecipes] = useState([])
-  const [q, setQ] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const navigate = useNavigate()
+  const { toast } = useToast();
 
+  // datos remotos
+  const [recipes, setRecipes] = useState([]);
+  const [total, setTotal] = useState(0);
+
+  // vista local
+  const [view, setView] = useState("list");
+  const [editingRecipe, setEditingRecipe] = useState(null);
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
+
+  // filtros
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTags, setActiveTags] = useState([]);
+  const [allTags, setAllTags] = useState([]);
+
+  // paginación
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // estado
+  const [loading, setLoading] = useState(true);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, recipe: null });
+
+  // cargar tags una vez
   useEffect(() => {
-    let alive = true
-    ;(async () => {
+    (async () => {
       try {
-        setLoading(true); setError(null)
-        let query = supabase.from('recipes').select('*').order('created_at', { ascending: false })
-        if (q.trim()) query = query.ilike('title', `%${q}%`)
-        const { data, error } = await query
-        if (error) throw error
-        if (!alive) return
-        setRecipes(data ?? [])
+        const tags = await getAllTags();
+        setAllTags(tags);
       } catch (e) {
-        if (!alive) return
-        setError(e.message || 'Error cargando recetas')
-      } finally {
-        if (alive) setLoading(false)
+        console.error(e);
       }
-    })()
-    return () => { alive = false }
-  }, [q])
+    })();
+  }, []);
 
-  const list = useMemo(() => recipes ?? [], [recipes])
+  // cargar recetas cuando cambian filtros/página
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const { rows, count } = await listRecipes({
+          q: searchQuery,
+          tags: activeTags,
+          page,
+          pageSize: PAGE_SIZE,
+        });
+        if (!alive) return;
+        setRecipes(rows);
+        setTotal(count);
+      } catch (e) {
+        toast({ title: "Error cargando recetas", description: e.message, variant: "destructive" });
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false };
+  }, [searchQuery, activeTags, page]);
+
+  // filtrado adicional en memoria (si quieres mantenerlo, aunque ya filtra el backend)
+  const filteredRecipes = useMemo(() => recipes, [recipes]);
+
+  // CRUD handlers
+
+  const handleSubmit = async (data) => {
+    // adapta desde tu RecipeForm (string → arrays, etc.)
+    const payload = {
+      id: editingRecipe?.id, // si existe, actualiza
+      title: data.title,
+      description: data.description || null,
+      tags: data.tags.split(",").map((t) => t.trim()).filter(Boolean),
+      // si tu form entrega texto, conviértelo; si entrega JSON, pásalo tal cual:
+      // ingredients: data.ingredientsJSON || null,
+      ingredients: data.ingredients?.split("\n").map(s => s.trim()).filter(Boolean) ?? null,
+      notes: data.notes || null,
+      rating: data.rating ?? null,
+      photo_url: data.photo || null,
+      // instrucciones: una por línea
+      instructions: (data.instructions || "")
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      prep_time_minutes: Number(data.prep_time_minutes || 20),
+      servings: Number(data.servings || 2),
+    };
+
+    try {
+      const id = await upsertRecipe(payload);
+      toast({ title: editingRecipe ? "¡Receta actualizada!" : "¡Receta creada!" });
+      setView("list");
+      setEditingRecipe(null);
+      // recargar página actual (o volver a la 1 si quieres ver el nuevo al principio)
+      setPage(1);
+    } catch (e) {
+      toast({ title: "Error al guardar", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleEdit = (recipe) => {
+    setEditingRecipe(recipe);
+    setView("form");
+  };
+
+  const handleDelete = (id) => {
+    const recipe = recipes.find((r) => r.id === id);
+    if (recipe) setDeleteDialog({ open: true, recipe });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.recipe) return;
+    try {
+      await deleteRecipe(deleteDialog.recipe.id);
+      toast({ title: "Receta eliminada", description: `"${deleteDialog.recipe.title}" eliminada.` });
+      // quita local y ajusta total
+      setRecipes((prev) => prev.filter((r) => r.id !== deleteDialog.recipe.id));
+      setTotal((t) => Math.max(0, t - 1));
+    } catch (e) {
+      toast({ title: "Error al borrar", description: e.message, variant: "destructive" });
+    } finally {
+      setDeleteDialog({ open: false, recipe: null });
+      if (view === "detail") setView("list");
+    }
+  };
+
+  const handleView = (recipe) => {
+    setSelectedRecipe(recipe);
+    setView("detail");
+  };
+
+  const handleCancel = () => {
+    setView("list");
+    setEditingRecipe(null);
+  };
+
+  const handleBack = () => {
+    setView("list");
+    setSelectedRecipe(null);
+  };
+
+  // cuando cambies búsqueda o tags, resetea a página 1
+  const onSearch = (q) => { setPage(1); setSearchQuery(q); };
+  const onTagFilter = (tags) => { setPage(1); setActiveTags(tags); };
+
+  if (view === "form") {
+    return (
+      <div className="min-h-screen bg-gradient-cream p-4">
+        <RecipeForm recipe={editingRecipe} onSubmit={handleSubmit} onCancel={handleCancel} />
+      </div>
+    );
+  }
+
+  if (view === "detail" && selectedRecipe) {
+    return (
+      <div className="min-h-screen bg-gradient-cream p-4">
+        <RecipeDetail recipe={selectedRecipe} onEdit={handleEdit} onDelete={handleDelete} onBack={handleBack} />
+        <DeleteConfirmDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog({ open, recipe: null })}
+          onConfirm={confirmDelete}
+          recipeTitle={deleteDialog.recipe?.title || ""}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{display:'flex', gap:12, alignItems:'center', marginBottom:12}}>
-        <h1 style={{margin:0, flex:1}}>Recetas</h1>
-        <button onClick={() => navigate('/new')}>➕ Añadir</button>
+    <div className="min-h-screen bg-gradient-cream">
+      {/* Hero */}
+      <div className="relative h-[60vh] flex items-center justify-center overflow-hidden">
+        <img src={heroImage} alt="Cocina elegante con ingredientes frescos" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
+        <div className="relative z-10 text-center text-white px-4">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <ChefHat className="h-12 w-12 text-primary-glow" />
+            <h1 className="text-5xl md:text-6xl font-bold">Mis Recetas</h1>
+          </div>
+          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">
+            Descubre, comparte y guarda tus recetas favoritas en un lugar especial
+          </p>
+          <Button onClick={() => setView("form")} className="bg-gradient-warm text-primary-foreground hover:opacity-90 shadow-glow text-lg px-8 py-6 h-auto">
+            <Plus className="h-5 w-5 mr-2" />
+            Añadir Nueva Receta
+          </Button>
+        </div>
       </div>
 
-      <input
-        placeholder="Buscar por título…"
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        style={{ padding: 8, width: '100%', maxWidth: 420, marginBottom: 16 }}
-      />
+      {/* Main */}
+      <div className="container mx-auto px-4 py-12">
+        {/* Search */}
+        <div className="mb-12">
+          <SearchBar
+            onSearch={onSearch}
+            onTagFilter={onTagFilter}
+            availableTags={allTags}
+            activeTags={activeTags}
+          />
+        </div>
 
-      {loading && <p>Cargando…</p>}
-      {error && <p style={{ color:'crimson' }}>Error: {error}</p>}
-      {!loading && !error && !list.length && <p>No hay recetas.</p>}
+        {/* Header resultados */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">
+              {filteredRecipes.length === recipes.length
+                ? "Todas las Recetas"
+                : `${filteredRecipes.length} ${filteredRecipes.length === 1 ? "Receta Encontrada" : "Recetas Encontradas"}`}
+            </h2>
+            <p className="text-muted-foreground mt-1">
+              {filteredRecipes.length === 0
+                ? "No se encontraron recetas con los filtros aplicados"
+                : `Total en base de datos: ${total}`}
+            </p>
+          </div>
+          <Button onClick={() => setView("form")} className="bg-gradient-warm text-primary-foreground hover:opacity-90 shadow-warm">
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Receta
+          </Button>
+        </div>
 
-      <ul style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px,1fr))', gap:16, listStyle:'none', padding:0}}>
-        {list.map(r => (
-          <li key={r.id} style={{border:'1px solid #eee', borderRadius:12, padding:12}}>
-            <Link to={`/recipe/${r.id}`} style={{textDecoration:'none', color:'inherit', display:'block'}}>
-              {r.photo_url && <img src={r.photo_url} alt={r.title} style={{width:'100%', height:160, objectFit:'cover', borderRadius:8, marginBottom:8}} />}
-              <h3 style={{margin:'6px 0'}}>{r.title}</h3>
-              {r.description && <p style={{opacity:0.8}}>{r.description}</p>}
-              <div style={{fontSize:12, opacity:0.7, marginTop:8}}>
-                {r.prep_time_minutes ? `⏱️ ${r.prep_time_minutes} min` : null}
-                {r.servings ? ` · 🍽️ ${r.servings} raciones` : null}
+        {/* Grid */}
+        {loading ? (
+          <div className="text-muted-foreground">Cargando…</div>
+        ) : filteredRecipes.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredRecipes.map((recipe) => (
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  onEdit={handleEdit}
+                  onDelete={() => handleDelete(recipe.id)}
+                  onView={handleView}
+                />
+              ))}
+            </div>
+
+            {/* Paginación */}
+            <div className="flex items-center justify-between mt-8">
+              <span className="text-sm text-muted-foreground">
+                {total === 0 ? "0" : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)}`} de {total}
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  Anterior
+                </Button>
+                <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  Siguiente
+                </Button>
               </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-16">
+            <ChefHat className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-foreground mb-2">No se encontraron recetas</h3>
+            <p className="text-muted-foreground mb-6">
+              {searchQuery || activeTags.length > 0 ? "Prueba ajustando los filtros de búsqueda" : "¡Empieza añadiendo tu primera receta!"}
+            </p>
+            <Button
+              onClick={() => setView("form")}
+              variant="outline"
+              className="border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Añadir Primera Receta
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Dialogo borrar */}
+      <DeleteConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ open, recipe: null })}
+        onConfirm={confirmDelete}
+        recipeTitle={deleteDialog.recipe?.title || ""}
+      />
     </div>
-  )
+  );
 }

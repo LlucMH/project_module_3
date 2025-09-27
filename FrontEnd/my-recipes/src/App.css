@@ -1,42 +1,176 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+/* @type postcss */
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Food-inspired warm palette */
+    --background: 35 20% 98%;
+    --foreground: 20 14% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14% 15%;
+
+    /* Warm orange primary inspired by spices and autumn colors */
+    --primary: 25 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 30 100% 70%;
+
+    /* Cream secondary for subtle elements */
+    --secondary: 35 25% 94%;
+    --secondary-foreground: 20 14% 15%;
+
+    /* Warm muted tones */
+    --muted: 35 15% 92%;
+    --muted-foreground: 20 8% 45%;
+
+    /* Soft peach accent */
+    --accent: 15 80% 88%;
+    --accent-foreground: 20 14% 15%;
+
+    /* Warm red for destructive actions */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Subtle borders */
+    --border: 35 12% 88%;
+    --input: 35 12% 88%;
+    --ring: 25 95% 53%;
+
+    /* Success green for ratings */
+    --success: 140 65% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning amber */
+    --warning: 45 93% 58%;
+    --warning-foreground: 20 14% 15%;
+
+    /* Gradients for beautiful food-inspired backgrounds */
+    --gradient-warm: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(15, 85%, 60%) 100%);
+    --gradient-sunset: linear-gradient(135deg, hsl(35, 100%, 85%) 0%, hsl(25, 95%, 53%) 50%, hsl(15, 85%, 60%) 100%);
+    --gradient-cream: linear-gradient(180deg, hsl(35, 25%, 96%) 0%, hsl(35, 20%, 94%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%) 0%, hsl(35, 15%, 98%) 100%);
+
+    /* Elegant shadows with warm tones */
+    --shadow-warm: 0 4px 20px -2px hsl(25 95% 53% / 0.15);
+    --shadow-card: 0 2px 12px -2px hsl(20 14% 15% / 0.08);
+    --shadow-hover: 0 8px 25px -2px hsl(25 95% 53% / 0.25);
+    --shadow-glow: 0 0 30px hsl(25 95% 53% / 0.3);
+
+    /* Smooth transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
-  to {
-    transform: rotate(360deg);
+
+  .dark {
+    /* Dark theme with warm accents */
+    --background: 20 14% 8%;
+    --foreground: 35 25% 96%;
+
+    --card: 20 14% 10%;
+    --card-foreground: 35 25% 96%;
+
+    --popover: 20 14% 10%;
+    --popover-foreground: 35 25% 96%;
+
+    /* Warm orange primary for dark mode */
+    --primary: 25 95% 58%;
+    --primary-foreground: 20 14% 8%;
+    --primary-glow: 30 100% 75%;
+
+    /* Dark cream secondary */
+    --secondary: 20 14% 16%;
+    --secondary-foreground: 35 25% 96%;
+
+    /* Dark muted tones */
+    --muted: 20 14% 14%;
+    --muted-foreground: 35 15% 65%;
+
+    /* Dark peach accent */
+    --accent: 20 14% 16%;
+    --accent-foreground: 35 25% 96%;
+
+    /* Warm red for destructive actions */
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Dark borders */
+    --border: 20 14% 18%;
+    --input: 20 14% 18%;
+    --ring: 25 95% 58%;
+
+    /* Success green for ratings */
+    --success: 140 65% 50%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning amber */
+    --warning: 45 93% 63%;
+    --warning-foreground: 20 14% 8%;
+
+    /* Dark gradients */
+    --gradient-warm: linear-gradient(135deg, hsl(25, 95%, 58%) 0%, hsl(15, 85%, 65%) 100%);
+    --gradient-sunset: linear-gradient(135deg, hsl(35, 80%, 25%) 0%, hsl(25, 95%, 58%) 50%, hsl(15, 85%, 65%) 100%);
+    --gradient-cream: linear-gradient(180deg, hsl(20, 14%, 9%) 0%, hsl(20, 14%, 7%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(20, 14%, 11%) 0%, hsl(20, 14%, 9%) 100%);
+
+    /* Dark elegant shadows with warm tones */
+    --shadow-warm: 0 4px 20px -2px hsl(25 95% 58% / 0.25);
+    --shadow-card: 0 2px 12px -2px hsl(0 0% 0% / 0.3);
+    --shadow-hover: 0 8px 25px -2px hsl(25 95% 58% / 0.35);
+    --shadow-glow: 0 0 30px hsl(25 95% 58% / 0.4);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
   }
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+/* Custom utility classes for recipe app */
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
