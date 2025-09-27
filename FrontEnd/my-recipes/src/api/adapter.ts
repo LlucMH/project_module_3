@@ -9,7 +9,7 @@ type MockRecipe = {
   ingredients?: string[]         // <-- en mock
   notes?: string                 // <-- contiene pasos numerados
   rating?: number
-  photo?: string                 // <-- en mock
+  photo_url?: string                 // <-- en mock
   createdAt?: Date
   updatedAt?: Date
 }
@@ -33,7 +33,7 @@ export function mockToDb(r: MockRecipe): Partial<Recipe> {
     ingredients,
     notes: r.notes ?? null,
     rating: r.rating ?? null,
-    photo_url: r.photo ?? null,
+    photo_url: r.photo_url ?? null,
     instructions,                 // requerido
     prep_time_minutes: 20,        // default razonable si no lo tienes
     servings: 2                   // default razonable

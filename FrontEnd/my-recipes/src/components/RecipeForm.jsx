@@ -17,7 +17,7 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
     ingredients: recipe?.ingredients.join("\n") || "",
     notes: recipe?.notes || "",
     rating: recipe?.rating || 0,
-    photo: recipe?.photo_url || "",
+    photo_url: recipe?.photo_url || "",
   });
 
   const [newTag, setNewTag] = useState("");
@@ -44,7 +44,7 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
       return;
     }
 
-    if (!formData.photo.trim()) {
+    if (!formData.photo_url.trim()) {
       toast({
         title: "Error",
         description: "La foto es obligatoria",
@@ -138,16 +138,16 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
           />
         </div>
 
-        {/* Photo */}
+        {/* photo_url */}
         <div className="space-y-2">
-          <Label htmlFor="photo" className="text-sm font-medium">
+          <Label htmlFor="photo_url" className="text-sm font-medium">
             URL de la foto *
           </Label>
           <div className="flex gap-2">
             <Input
-              id="photo"
-              value={formData.photo}
-              onChange={(e) => setFormData(prev => ({ ...prev, photo: e.target.value }))}
+              id="photo_url"
+              value={formData.photo_url}
+              onChange={(e) => setFormData(prev => ({ ...prev, photo_url: e.target.value }))}
               placeholder="https://ejemplo.com/mi-receta.jpg"
               className="bg-card border-border/50 focus:border-primary"
             />
@@ -155,10 +155,10 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
               <Upload className="h-4 w-4" />
             </Button>
           </div>
-          {formData.photo && (
+          {formData.photo_url && (
             <div className="mt-2">
               <img
-                src={formData.photo}
+                src={formData.photo_url}
                 alt="Vista previa"
                 className="w-full h-32 object-cover rounded-lg border"
                 onError={(e) => {
