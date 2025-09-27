@@ -172,3 +172,13 @@ All colors MUST be HSL.
     overflow: hidden;
   }
 }
+
+@layer utilities {
+  .bg-gradient-cream { background: var(--gradient-cream); }
+  .bg-gradient-warm  { background: var(--gradient-warm); }
+  .bg-gradient-card  { background: var(--gradient-card); }
+
+  .text-primary-glow { text-shadow: 0 2px 14px hsla(25,95%,53%,.35); }
+  .shadow-glow       { box-shadow: var(--shadow-hover); }
+  .shadow-warm       { box-shadow: var(--shadow-warm); }
+}
