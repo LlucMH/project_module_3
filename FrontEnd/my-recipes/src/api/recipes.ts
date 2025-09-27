@@ -30,6 +30,7 @@ export async function listRecipes({
     .from("recipes")
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false })
+    .order("title", { ascending: true })
     .range(from, to)
 
   if (q.trim()) {
