@@ -17,7 +17,7 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
     ingredients: recipe?.ingredients.join("\n") || "",
     notes: recipe?.notes || "",
     rating: recipe?.rating || 0,
-    photo: recipe?.photo || "",
+    photo: recipe?.photo_url || "",
   });
 
   const [newTag, setNewTag] = useState("");

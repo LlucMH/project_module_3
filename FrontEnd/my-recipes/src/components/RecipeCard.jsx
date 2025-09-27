@@ -22,7 +22,7 @@ export function RecipeCard({ recipe, onEdit, onDelete, onView }) {
       {/* Image Container */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
-          src={recipe.photo}
+          src={recipe.photo_url}
           alt={recipe.title}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />

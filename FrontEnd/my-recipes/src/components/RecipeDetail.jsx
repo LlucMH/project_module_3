@@ -60,7 +60,7 @@ export function RecipeDetail({ recipe, onEdit, onDelete, onBack }) {
       {/* Hero Image */}
       <div className="relative aspect-[21/9] rounded-xl overflow-hidden bg-gradient-card shadow-hover">
         <img
-          src={recipe.photo}
+          src={recipe.photo_url}
           alt={recipe.title}
           className="h-full w-full object-cover"
         />
