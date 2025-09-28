@@ -1,4 +1,3 @@
-// src/api/adapter.ts
 import type { Recipe } from '../types/recipe'
 
 type MockRecipe = {
@@ -6,23 +5,21 @@ type MockRecipe = {
   title: string
   description?: string
   tags?: string[]
-  ingredients?: string[]         // <-- en mock
-  notes?: string                 // <-- contiene pasos numerados
+  ingredients?: string[]
+  notes?: string 
   rating?: number
-  photo_url?: string                 // <-- en mock
+  photo_url?: string
   createdAt?: Date
   updatedAt?: Date
 }
 
 export function mockToDb(r: MockRecipe): Partial<Recipe> {
-  // 1) instrucciones: partir notes en líneas numeradas (1., 2., ...)
   const instructions =
     r.notes
       ?.split(/\n+/)
       .map(s => s.replace(/^\s*\d+\.\s*/, '').trim())
       .filter(Boolean) ?? ['Paso 1', 'Paso 2']
 
-  // 2) ingredients: pasar de string[] a objetos básicos (name)
   const ingredients =
     r.ingredients?.map(name => ({ name })) ?? null
 
@@ -34,8 +31,8 @@ export function mockToDb(r: MockRecipe): Partial<Recipe> {
     notes: r.notes ?? null,
     rating: r.rating ?? null,
     photo_url: r.photo_url ?? null,
-    instructions,                 // requerido
-    prep_time_minutes: 20,        // default razonable si no lo tienes
-    servings: 2                   // default razonable
+    instructions,
+    prep_time_minutes: 20,
+    servings: 2  
   }
 }
