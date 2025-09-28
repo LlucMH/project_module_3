@@ -3,25 +3,33 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase, SUPABASE_URL } from "@/lib/supabase";
 
+/**
+ * Comprueba:
+ *  - Servidor: fetch a /health con mode:'no-cors' (si resuelve, lo damos por OK)
+ *  - DB: HEAD select con count exacto a public.recipes
+ */
 export async function getApiStatus() {
   const started = performance.now();
 
-  const healthUrl = `${SUPABASE_URL.replace(/\/$/, "")}/health`;
+  // --- Servidor (/health) ---
   let serverOk = false;
   try {
-    const t0 = performance.now();
-    const res = await fetch(healthUrl, { cache: "no-store" });
-    serverOk = res.ok;
+    // En muchos proyectos /health no expone CORS → usamos 'no-cors'
+    await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/health`, {
+      cache: "no-store",
+      mode: "no-cors",
+    });
+    serverOk = true; // si resolvió sin throw, lo consideramos reachable
   } catch {
     serverOk = false;
   }
 
+  // --- DB (PostgREST) ---
   try {
     const tDb = performance.now();
     const { error, count } = await supabase
       .from("recipes")
       .select("id", { count: "exact", head: true });
-
     const dbLatency = Math.round(performance.now() - tDb);
 
     if (error) {
@@ -36,8 +44,11 @@ export async function getApiStatus() {
       };
     }
 
+    // Si la DB respondió, el servidor está realmente up aunque /health esté sin CORS
+    if (!serverOk) serverOk = true;
+
     return {
-      ok: serverOk && true,
+      ok: serverOk, // ambas condiciones ya cubiertas
       server: serverOk ? "ok" : "down",
       db: "ok",
       count,
