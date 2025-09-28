@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, ChefHat } from "lucide-react";
 import { RecipeCard } from "@/components/RecipeCard";
-import { RecipeForm } from "@/components/RecipeForm"; // <-- si export default: usa `import RecipeForm from ...`
+import { RecipeForm } from "@/components/RecipeForm"; // <-- si es export default: usa `import RecipeForm from ...`
 import { RecipeDetail } from "@/components/RecipeDetail";
 import { SearchBar } from "@/components/SearchBar";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -12,6 +12,7 @@ import heroImage from "@/assets/hero-kitchen.jpg";
 
 // API
 import { listRecipes, getAllTags, deleteRecipe, upsertRecipe } from "@/api/recipes";
+import { getApiStatus } from "@/api/status"; // ⬅️ NUEVO
 
 const PAGE_SIZE = 12;
 
@@ -40,9 +41,11 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, recipe: null });
 
+  // API status
   const [showApiStatus, setShowApiStatus] = useState(false);
+  const [apiStatus, setApiStatus] = useState({ loading: false, data: null, error: null });
 
-  // --- helpers de normalización (no causan HMR) ---
+  // --- helpers de normalización ---
   const normString = (v) => (v == null ? "" : String(v));
   const normArrayFromCSV = (v) =>
     Array.isArray(v)
@@ -52,6 +55,28 @@ export default function Index() {
     Array.isArray(v)
       ? v.map((s) => String(s).trim()).filter(Boolean)
       : normString(v).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+
+  // Si llegan objetos de ingrediente, conviértelos a texto "qty unit name"
+  const ingObjToText = (ing) => {
+    if (ing && typeof ing === "object") {
+      const qty = ing.qty != null && ing.qty !== "" ? String(ing.qty).trim() : "";
+      const unit = ing.unit ? String(ing.unit).trim() : "";
+      const name = ing.name ? String(ing.name).trim() : "";
+      const left = [qty, unit].filter(Boolean).join(" ");
+      return [left, name].filter(Boolean).join(" ").trim();
+    }
+    return String(ing ?? "").trim();
+  };
+
+  const toTextArray = (arrOrStr, mode = "lines") => {
+    if (Array.isArray(arrOrStr)) {
+      return arrOrStr.map(ingObjToText).filter(Boolean);
+    }
+    const s = normString(arrOrStr);
+    return (mode === "csv" ? s.split(",") : s.split(/\r?\n/))
+      .map((x) => x.trim())
+      .filter(Boolean);
+  };
 
   // --- helpers de datos ---
   const refreshTags = async () => {
@@ -118,6 +143,21 @@ export default function Index() {
 
   const filteredRecipes = useMemo(() => recipes, [recipes]);
 
+  // --- API Status logic ---
+  const loadApiStatus = async () => {
+    setApiStatus({ loading: true, data: null, error: null });
+    const res = await getApiStatus();
+    if (res.ok) setApiStatus({ loading: false, data: res, error: null });
+    else setApiStatus({ loading: false, data: res, error: res.error || res.dbError || "Fallo de estado" });
+  };
+
+  useEffect(() => {
+    if (!showApiStatus) return;
+    void loadApiStatus();
+    const id = setInterval(loadApiStatus, 60000); // auto-refresh cada 60s mientras está abierto
+    return () => clearInterval(id);
+  }, [showApiStatus]);
+
   // Handlers
   const handleSubmit = async (data) => {
     const payload = {
@@ -125,10 +165,15 @@ export default function Index() {
       title: data.title,
       description: data.description || null,
 
-      // soporta string o array; prioriza *_array si viene del form
+      // arrays (prioriza *_array si vienen ya normalizados)
       tags: Array.isArray(data.tags_array) ? data.tags_array : normArrayFromCSV(data.tags),
-      ingredients: Array.isArray(data.ingredients_array) ? data.ingredients_array : normArrayFromLines(data.ingredients),
-      instructions: Array.isArray(data.instructions_array) ? data.instructions_array : normArrayFromLines(data.instructions),
+      // ingredients: text[] (convierte objetos -> texto)
+      ingredients: Array.isArray(data.ingredients_array)
+        ? data.ingredients_array.map(ingObjToText)
+        : toTextArray(data.ingredients, "lines"),
+      instructions: Array.isArray(data.instructions_array)
+        ? data.instructions_array.map((x) => String(x).trim()).filter(Boolean)
+        : normArrayFromLines(data.instructions),
 
       notes: data.notes || null,
       rating: typeof data.rating === "number" ? data.rating : Number(data.rating ?? 0),
@@ -138,7 +183,7 @@ export default function Index() {
     };
 
     try {
-      await upsertRecipe(payload); // si update, asegúrate que hace .update().eq('id', ...) o upsert con onConflict('id')
+      await upsertRecipe(payload); // asegúrate que hace update con .eq('id', ...) o upsert con onConflict('id')
       toast({ title: editingRecipe ? "¡Receta actualizada!" : "¡Receta creada!" });
       await reload({ resetPage: true });
       await refreshTags();
@@ -175,33 +220,23 @@ export default function Index() {
   };
 
   const handleView = (recipe) => {
-    const normString = (v) => (v == null ? "" : String(v));
-    const normArrayFromCSV = (v) =>
-      Array.isArray(v)
-        ? v.map((s) => String(s).trim()).filter(Boolean)
-        : normString(v).split(",").map((s) => s.trim()).filter(Boolean);
-    const normArrayFromLines = (v) =>
-      Array.isArray(v)
-        ? v.map((s) => String(s).trim()).filter(Boolean)
-        : normString(v).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-
-  const normalized = {
-    ...recipe,
-    tags:
-      Array.isArray(recipe.tags_array) ? recipe.tags_array : normArrayFromCSV(recipe.tags),
-    ingredients:
-      Array.isArray(recipe.ingredients_array) ? recipe.ingredients_array : normArrayFromLines(recipe.ingredients),
-    instructions:
-      Array.isArray(recipe.instructions_array) ? recipe.instructions_array : normArrayFromLines(recipe.instructions),
-    rating: typeof recipe.rating === "number" ? recipe.rating : Number(recipe.rating ?? 0),
-    prep_time_minutes: Number(recipe.prep_time_minutes ?? 0) || null,
-    servings: Number(recipe.servings ?? 0) || null,
-  };
+    const normalized = {
+      ...recipe,
+      tags: Array.isArray(recipe.tags) ? recipe.tags : normArrayFromCSV(recipe.tags),
+      ingredients: Array.isArray(recipe.ingredients)
+        ? recipe.ingredients
+        : toTextArray(recipe.ingredients, "lines"),
+      instructions: Array.isArray(recipe.instructions)
+        ? recipe.instructions
+        : normArrayFromLines(recipe.instructions),
+      rating: typeof recipe.rating === "number" ? recipe.rating : Number(recipe.rating ?? 0),
+      prep_time_minutes: Number(recipe.prep_time_minutes ?? 0) || null,
+      servings: Number(recipe.servings ?? 0) || null,
+    };
 
     setSelectedRecipe(normalized);
     setView("detail");
   };
-
 
   const handleCancel = () => {
     setView("list");
@@ -258,27 +293,63 @@ export default function Index() {
           <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">
             Descubre, comparte y guarda tus recetas favoritas en un lugar especial
           </p>
+
+          {/* Botón de estado de la API */}
           <Button
-            onClick={() => setShowApiStatus(!showApiStatus)}
+            onClick={() => setShowApiStatus((prev) => !prev)}
             className="bg-gradient-warm text-primary-foreground hover:opacity-90 shadow-glow text-lg px-8 py-6 h-auto"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Status de la API
+            {showApiStatus ? "Ocultar estado de la API" : "Mostrar estado de la API"}
           </Button>
         </div>
       </div>
 
-      {/* API Status Panel */}
+      {/* API Status Panel (en vivo) */}
       {showApiStatus && (
         <div className="mt-8 px-6">
-          <Card className="p-6 bg-background border border-muted shadow">
-            <h2 className="text-xl font-semibold text-foreground mb-4">Estado de la API</h2>
-            <ul className="list-disc pl-5 text-foreground">
-              <li>Base de datos: ✅ Conectada</li>
-              <li>Servidor: ✅ Activo</li>
-              <li>Latencia promedio: 120ms</li>
-              <li>Último chequeo: hace 5 minutos</li>
-            </ul>
+          <Card className="p-6 bg-background border border-muted shadow space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-foreground">Estado de la API</h2>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={loadApiStatus} disabled={apiStatus.loading}>
+                  {apiStatus.loading ? "Comprobando..." : "Reintentar"}
+                </Button>
+              </div>
+            </div>
+
+            {apiStatus.loading && <p className="text-muted-foreground">Comprobando estado…</p>}
+
+            {!apiStatus.loading && apiStatus.data && (
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-foreground">
+                <li><strong>OK:</strong> {apiStatus.data.ok ? "✅ Sí" : "❌ No"}</li>
+                {"server" in apiStatus.data && (
+                  <li><strong>Servidor:</strong> {apiStatus.data.server === "ok" ? "✅" : String(apiStatus.data.server)}</li>
+                )}
+                {"db" in apiStatus.data && (
+                  <li><strong>Base de datos:</strong> {apiStatus.data.db === "ok" ? "✅" : "❌"}</li>
+                )}
+                {"count" in apiStatus.data && (
+                  <li><strong>Recetas (count):</strong> {apiStatus.data.count}</li>
+                )}
+                {"latency" in apiStatus.data && (
+                  <li><strong>Latencia total:</strong> {apiStatus.data.latency} ms</li>
+                )}
+                {"dbLatency" in apiStatus.data && (
+                  <li><strong>Latencia DB:</strong> {apiStatus.data.dbLatency} ms</li>
+                )}
+                {"url" in apiStatus.data && (
+                  <li><strong>Proyecto:</strong> {apiStatus.data.url}</li>
+                )}
+                {"source" in apiStatus.data && (
+                  <li><strong>Fuente:</strong> {apiStatus.data.source}</li>
+                )}
+              </ul>
+            )}
+
+            {!apiStatus.loading && apiStatus.error && (
+              <p className="text-destructive">Error: {apiStatus.error}</p>
+            )}
           </Card>
         </div>
       )}
@@ -312,7 +383,13 @@ export default function Index() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredRecipes.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} onEdit={handleEdit} onDelete={() => handleDelete(recipe.id)} onView={handleView} />
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  onEdit={handleEdit}
+                  onDelete={() => handleDelete(recipe.id)}
+                  onView={handleView}
+                />
               ))}
             </div>
 
