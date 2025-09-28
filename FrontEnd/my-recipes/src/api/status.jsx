@@ -1,46 +1,33 @@
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-
-const SUPABASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
-  process.env.SUPABASE_URL ||
-  "https://ztfucpqgulghmlfufiwe.supabase.co";
-
-const SUPABASE_KEY =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
-  process.env.SUPABASE_KEY ||
-  "";
+import { supabase, SUPABASE_URL } from "@/lib/supabase";
 
 export async function getApiStatus() {
   const started = performance.now();
 
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    return {
-      ok: false,
-      server: "unknown",
-      db: "error",
-      error:
-        "Falta configuración de Supabase (SUPABASE_URL / SUPABASE_KEY o VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).",
-      latency: Math.round(performance.now() - started),
-      source: "supabase",
-    };
+  const healthUrl = `${SUPABASE_URL.replace(/\/$/, "")}/health`;
+  let serverOk = false;
+  try {
+    const t0 = performance.now();
+    const res = await fetch(healthUrl, { cache: "no-store" });
+    serverOk = res.ok;
+  } catch {
+    serverOk = false;
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
   try {
-    const dbStarted = performance.now();
+    const tDb = performance.now();
     const { error, count } = await supabase
       .from("recipes")
       .select("id", { count: "exact", head: true });
-    const dbLatency = Math.round(performance.now() - dbStarted);
+
+    const dbLatency = Math.round(performance.now() - tDb);
 
     if (error) {
       return {
         ok: false,
-        server: "ok",
+        server: serverOk ? "ok" : "down",
         db: "error",
         dbError: error.message,
         latency: Math.round(performance.now() - started),
@@ -50,8 +37,8 @@ export async function getApiStatus() {
     }
 
     return {
-      ok: true,
-      server: "ok",
+      ok: serverOk && true,
+      server: serverOk ? "ok" : "down",
       db: "ok",
       count,
       latency: Math.round(performance.now() - started),
@@ -62,9 +49,9 @@ export async function getApiStatus() {
   } catch (e) {
     return {
       ok: false,
-      server: "ok",
+      server: serverOk ? "ok" : "down",
       db: "error",
-      error: e.message,
+      error: e?.message ?? "Error de consulta a la base de datos",
       latency: Math.round(performance.now() - started),
       source: "supabase",
     };
@@ -85,7 +72,11 @@ export default function ApiStatusPanel({
     if (res.ok) {
       setState({ loading: false, data: res, error: null });
     } else {
-      setState({ loading: false, data: res, error: res.error || res.dbError || "Fallo de estado" });
+      setState({
+        loading: false,
+        data: res,
+        error: res.error || res.dbError || "Fallo de estado",
+      });
     }
   };
 
@@ -118,45 +109,27 @@ export default function ApiStatusPanel({
 
             {!state.loading && state.data && (
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-foreground">
-                <li>
-                  <strong>OK:</strong> {state.data.ok ? "✅ Sí" : "❌ No"}
-                </li>
+                <li><strong>OK:</strong> {state.data.ok ? "✅ Sí" : "❌ No"}</li>
                 {"server" in state.data && (
-                  <li>
-                    <strong>Servidor:</strong>{" "}
-                    {state.data.server === "ok" ? "✅" : String(state.data.server)}
-                  </li>
+                  <li><strong>Servidor:</strong> {state.data.server === "ok" ? "✅" : "❌"}</li>
                 )}
                 {"db" in state.data && (
-                  <li>
-                    <strong>Base de datos:</strong>{" "}
-                    {state.data.db === "ok" ? "✅" : "❌"}
-                  </li>
+                  <li><strong>Base de datos:</strong> {state.data.db === "ok" ? "✅" : "❌"}</li>
                 )}
                 {"count" in state.data && (
-                  <li>
-                    <strong>Recetas (count):</strong> {state.data.count}
-                  </li>
+                  <li><strong>Recetas (count):</strong> {state.data.count}</li>
                 )}
                 {"latency" in state.data && (
-                  <li>
-                    <strong>Latencia total:</strong> {state.data.latency} ms
-                  </li>
+                  <li><strong>Latencia total:</strong> {state.data.latency} ms</li>
                 )}
                 {"dbLatency" in state.data && (
-                  <li>
-                    <strong>Latencia DB:</strong> {state.data.dbLatency} ms
-                  </li>
+                  <li><strong>Latencia DB:</strong> {state.data.dbLatency} ms</li>
                 )}
                 {"url" in state.data && (
-                  <li>
-                    <strong>Proyecto:</strong> {state.data.url}
-                  </li>
+                  <li><strong>Proyecto:</strong> {state.data.url}</li>
                 )}
                 {"source" in state.data && (
-                  <li>
-                    <strong>Fuente:</strong> {state.data.source}
-                  </li>
+                  <li><strong>Fuente:</strong> {state.data.source}</li>
                 )}
               </ul>
             )}
