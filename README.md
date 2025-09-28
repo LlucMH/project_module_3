@@ -7,8 +7,6 @@ Incluye **colección de Postman**, *seed* SQL con **30 recetas**, y componentes 
 
 ## Demo
 
-[http://localhost:5173/](http://localhost:5173/)
-
 - [Frontend (Netlify)](https://project3lluc.netlify.app/)
 - [Docs Postman (lectura)](https://documenter.getpostman.com/view/19714765/2sB3QDvXzf)
 - [Workspace Postman (pruebas)](https://none66-7207.postman.co/workspace/MyRecipes~500187f5-b257-468d-8383-131d401c3807/collection/19714765-bda563f5-c9a0-4b1e-99f3-3b8e099fdb0d)
