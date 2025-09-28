@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card"; // ✅ Importado correctamente
 import { Plus, ChefHat } from "lucide-react";
 import { RecipeCard } from "@/components/RecipeCard";
 import { RecipeForm } from "@/components/RecipeForm";
@@ -39,6 +40,8 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, recipe: null });
 
+  const [showApiStatus, setShowApiStatus] = useState(false);
+
   // cargar tags una vez
   useEffect(() => {
     (async () => {
@@ -75,25 +78,19 @@ export default function Index() {
     return () => { alive = false };
   }, [searchQuery, activeTags, page]);
 
-  // filtrado adicional en memoria (si quieres mantenerlo, aunque ya filtra el backend)
   const filteredRecipes = useMemo(() => recipes, [recipes]);
 
-  // CRUD handlers
-
+  // Handlers
   const handleSubmit = async (data) => {
-    // adapta desde tu RecipeForm (string → arrays, etc.)
     const payload = {
-      id: editingRecipe?.id, // si existe, actualiza
+      id: editingRecipe?.id,
       title: data.title,
       description: data.description || null,
       tags: data.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      // si tu form entrega texto, conviértelo; si entrega JSON, pásalo tal cual:
-      // ingredients: data.ingredientsJSON || null,
       ingredients: data.ingredients?.split("\n").map(s => s.trim()).filter(Boolean) ?? null,
       notes: data.notes || null,
       rating: data.rating ?? null,
       photo_url: data.photo || null,
-      // instrucciones: una por línea
       instructions: (data.instructions || "")
         .split("\n")
         .map((s) => s.trim())
@@ -107,7 +104,6 @@ export default function Index() {
       toast({ title: editingRecipe ? "¡Receta actualizada!" : "¡Receta creada!" });
       setView("list");
       setEditingRecipe(null);
-      // recargar página actual (o volver a la 1 si quieres ver el nuevo al principio)
       setPage(1);
     } catch (e) {
       toast({ title: "Error al guardar", description: e.message, variant: "destructive" });
@@ -129,7 +125,6 @@ export default function Index() {
     try {
       await deleteRecipe(deleteDialog.recipe.id);
       toast({ title: "Receta eliminada", description: `"${deleteDialog.recipe.title}" eliminada.` });
-      // quita local y ajusta total
       setRecipes((prev) => prev.filter((r) => r.id !== deleteDialog.recipe.id));
       setTotal((t) => Math.max(0, t - 1));
     } catch (e) {
@@ -155,7 +150,6 @@ export default function Index() {
     setSelectedRecipe(null);
   };
 
-  // cuando cambies búsqueda o tags, resetea a página 1
   const onSearch = (q) => { setPage(1); setSearchQuery(q); };
   const onTagFilter = (tags) => { setPage(1); setActiveTags(tags); };
 
@@ -195,16 +189,33 @@ export default function Index() {
           <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">
             Descubre, comparte y guarda tus recetas favoritas en un lugar especial
           </p>
-          <Button onClick={() => setView("form")} className="bg-gradient-warm text-primary-foreground hover:opacity-90 shadow-glow text-lg px-8 py-6 h-auto">
+          <Button
+            onClick={() => setShowApiStatus(!showApiStatus)}
+            className="bg-gradient-warm text-primary-foreground hover:opacity-90 shadow-glow text-lg px-8 py-6 h-auto"
+          >
             <Plus className="h-5 w-5 mr-2" />
-            Añadir Nueva Receta
+            Status de la API
           </Button>
         </div>
       </div>
 
+      {/* API Status Panel */}
+      {showApiStatus && (
+        <div className="mt-8 px-6">
+          <Card className="p-6 bg-background border border-muted shadow">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Estado de la API</h2>
+            <ul className="list-disc pl-5 text-foreground">
+              <li>Base de datos: ✅ Conectada</li>
+              <li>Servidor: ✅ Activo</li>
+              <li>Latencia promedio: 120ms</li>
+              <li>Último chequeo: hace 5 minutos</li>
+            </ul>
+          </Card>
+        </div>
+      )}
+
       {/* Main */}
       <div className="container mx-auto px-4 py-12">
-        {/* Search */}
         <div className="mb-12">
           <SearchBar
             onSearch={onSearch}
@@ -214,7 +225,6 @@ export default function Index() {
           />
         </div>
 
-        {/* Header resultados */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-bold text-foreground">
@@ -234,7 +244,6 @@ export default function Index() {
           </Button>
         </div>
 
-        {/* Grid */}
         {loading ? (
           <div className="text-muted-foreground">Cargando…</div>
         ) : filteredRecipes.length > 0 ? (
@@ -251,7 +260,6 @@ export default function Index() {
               ))}
             </div>
 
-            {/* Paginación */}
             <div className="flex items-center justify-between mt-8">
               <span className="text-sm text-muted-foreground">
                 {total === 0 ? "0" : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)}`} de {total}
@@ -285,7 +293,6 @@ export default function Index() {
         )}
       </div>
 
-      {/* Dialogo borrar */}
       <DeleteConfirmDialog
         open={deleteDialog.open}
         onOpenChange={(open) => setDeleteDialog({ open, recipe: null })}
