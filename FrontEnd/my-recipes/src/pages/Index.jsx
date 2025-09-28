@@ -175,9 +175,33 @@ export default function Index() {
   };
 
   const handleView = (recipe) => {
-    setSelectedRecipe(recipe);
+    const normString = (v) => (v == null ? "" : String(v));
+    const normArrayFromCSV = (v) =>
+      Array.isArray(v)
+        ? v.map((s) => String(s).trim()).filter(Boolean)
+        : normString(v).split(",").map((s) => s.trim()).filter(Boolean);
+    const normArrayFromLines = (v) =>
+      Array.isArray(v)
+        ? v.map((s) => String(s).trim()).filter(Boolean)
+        : normString(v).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+
+  const normalized = {
+    ...recipe,
+    tags:
+      Array.isArray(recipe.tags_array) ? recipe.tags_array : normArrayFromCSV(recipe.tags),
+    ingredients:
+      Array.isArray(recipe.ingredients_array) ? recipe.ingredients_array : normArrayFromLines(recipe.ingredients),
+    instructions:
+      Array.isArray(recipe.instructions_array) ? recipe.instructions_array : normArrayFromLines(recipe.instructions),
+    rating: typeof recipe.rating === "number" ? recipe.rating : Number(recipe.rating ?? 0),
+    prep_time_minutes: Number(recipe.prep_time_minutes ?? 0) || null,
+    servings: Number(recipe.servings ?? 0) || null,
+  };
+
+    setSelectedRecipe(normalized);
     setView("detail");
   };
+
 
   const handleCancel = () => {
     setView("list");
