@@ -76,11 +76,11 @@ export function RecipeDetail({ recipe, onEdit, onDelete, onBack }) {
             </div>
             <div className="flex items-center gap-1 text-white/80">
               <Clock className="h-4 w-4" />
-              <span className="text-sm">30 min</span>
+              <span className="text-sm">{recipe.prep_time_minutes} min</span>
             </div>
             <div className="flex items-center gap-1 text-white/80">
               <Users className="h-4 w-4" />
-              <span className="text-sm">4 porciones</span>
+              <span className="text-sm">{recipe.servings} porciones</span>
             </div>
           </div>
         </div>
@@ -94,21 +94,6 @@ export function RecipeDetail({ recipe, onEdit, onDelete, onBack }) {
             <h2 className="text-xl font-semibold text-foreground mb-4">Descripción</h2>
             <p className="text-foreground leading-relaxed">{recipe.description}</p>
           </Card>
-
-          {/* Instructions */}
-          {recipe.notes && (
-            <Card className="p-6 bg-gradient-card shadow-card">
-              <h2 className="text-xl font-semibold text-foreground mb-4">Instrucciones</h2>
-              <div className="prose prose-sm max-w-none text-foreground">
-                {recipe.notes.split('\n').map((line, index) => (
-                  <p key={index} className="mb-2 leading-relaxed">
-                    {line}
-                  </p>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
@@ -124,6 +109,33 @@ export function RecipeDetail({ recipe, onEdit, onDelete, onBack }) {
               ))}
             </ul>
           </Card>
+
+          {/* Instrucciones */}
+          <Card className="p-6 bg-gradient-card shadow-card">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Instrucciones</h3>
+            <ol className="space-y-3 list-decimal list-inside">
+              {recipe.instructions.map((instruction, index) => (
+                <li key={index} className="text-foreground leading-relaxed">
+                  {instruction}
+                </li>
+              ))}
+            </ol>
+          </Card>
+
+          {/* Notes */}
+          {recipe.notes && (
+            <Card className="p-6 bg-gradient-card shadow-card">
+              <h2 className="text-xl font-semibold text-foreground mb-4">Notas</h2>
+              <div className="prose prose-sm max-w-none text-foreground">
+                {recipe.notes.split('\n').map((line, index) => (
+                  <p key={index} className="mb-2 leading-relaxed">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>          
 
           {/* Tags */}
           <Card className="p-6 bg-gradient-card shadow-card">
@@ -152,12 +164,6 @@ export function RecipeDetail({ recipe, onEdit, onDelete, onBack }) {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Actualizada:</span>
                 <span className="text-foreground">{formatDate(recipe.updatedAt)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Calificación:</span>
-                <div className="flex items-center gap-1">
-                  {renderStars(recipe.rating)}
-                </div>
               </div>
             </div>
           </Card>

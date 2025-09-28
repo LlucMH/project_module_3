@@ -15,8 +15,11 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
     description: recipe?.description || "",
     tags: recipe?.tags.join(", ") || "",
     ingredients: recipe?.ingredients.join("\n") || "",
+    instructions: recipe?.instructions || "",
     notes: recipe?.notes || "",
     rating: recipe?.rating || 0,
+    prep_time_minutes: recipe?.prep_time_minutes || 5,
+    servings: recipe?.servings || 1,
     photo_url: recipe?.photo_url || "",
   });
 
@@ -35,21 +38,18 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
       return;
     }
 
-    if (!formData.description.trim()) {
-      toast({
-        title: "Error", 
-        description: "La descripción es obligatoria",
-        variant: "destructive",
-      });
+    if (!formData.ingredients.trim()) {
+      toast({ title: "Error", description: "Los ingredientes son obligatorios", variant: "destructive" });
       return;
     }
 
-    if (!formData.photo_url.trim()) {
-      toast({
-        title: "Error",
-        description: "La foto es obligatoria",
-        variant: "destructive",
-      });
+    if (!formData.prep_time_minutes || prep_time_minutes < 1) {
+        toast({ title: "Error", description: "Indica un tiempo de preparación válido", variant: "destructive" });
+      return;
+    }
+
+    if (!formData.servings || servings < 1) {
+        toast({ title: "Error", description: "Indica un número de comensales válido", variant: "destructive" });
       return;
     }
 
@@ -127,7 +127,7 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
         {/* Description */}
         <div className="space-y-2">
           <Label htmlFor="description" className="text-sm font-medium">
-            Descripción *
+            Descripción
           </Label>
           <Textarea
             id="description"
@@ -141,7 +141,7 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
         {/* photo_url */}
         <div className="space-y-2">
           <Label htmlFor="photo_url" className="text-sm font-medium">
-            URL de la foto *
+            URL de la foto
           </Label>
           <div className="flex gap-2">
             <Input
@@ -182,7 +182,7 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
 
         {/* Tags */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Tags</Label>
+          <Label className="text-sm font-medium">Tags *</Label>
           <div className="flex gap-2">
             <Input
               value={newTag}
@@ -221,7 +221,7 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
 
         {/* Ingredients */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Ingredientes</Label>
+          <Label className="text-sm font-medium">Ingredientes *</Label>
           <div className="flex gap-2">
             <Input
               value={newIngredient}
@@ -242,16 +242,59 @@ export function RecipeForm({ recipe, onSubmit, onCancel }) {
           />
         </div>
 
+        {/* Instructions */}
+        <div className="space-y-2">
+          <Label htmlFor="instructions" className="text-sm font-medium">
+            Instrucciones
+          </Label>
+          <Textarea
+            id="instructions"
+            value={formData.instructions}
+            onChange={(e) => setFormData(prev => ({ ...prev, instructions: e.target.value }))}
+            placeholder="Instrucciones de preparación"
+            className="bg-card border-border/50 focus:border-primary min-h-[150px] resize-none"
+          />
+        </div>
+
+
+        {/* Preparation time */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="prep_time_minutes" className="text-sm font-medium">Tiempo de preparación *</Label>
+            <Input
+              id="prep_time_minutes"
+              type="number"
+              min={1}
+              value={formData.prep_time_minutes}
+              onChange={(e) => setFormData(prev => ({ ...prev, prep_time_minutes: e.target.value }))}
+              className="bg-card border-border/50 focus:border-primary"
+            />
+          </div>
+
+          {/* Services */}
+          <div className="space-y-2">
+            <Label htmlFor="servings" className="text-sm font-medium">Raciones *</Label>
+            <Input
+              id="servings"
+              type="number"
+              min={1}
+              value={formData.servings}
+              onChange={(e) => setFormData(prev => ({ ...prev, servings: e.target.value }))}
+              className="bg-card border-border/50 focus:border-primary"
+            />
+          </div>
+        </div>
+
         {/* Notes */}
         <div className="space-y-2">
           <Label htmlFor="notes" className="text-sm font-medium">
-            Notas e instrucciones
+            Notas
           </Label>
           <Textarea
             id="notes"
             value={formData.notes}
             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-            placeholder="Instrucciones de preparación, consejos, variaciones..."
+            placeholder="Consejos, variaciones, comentarios..."
             className="bg-card border-border/50 focus:border-primary min-h-[150px] resize-none"
           />
         </div>
