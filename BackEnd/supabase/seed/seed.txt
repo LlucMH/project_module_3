@@ -1,0 +1,246 @@
+-- 1) Crear nueva tabla limpia
+drop table if exists public.recipes cascade;
+
+create table public.recipes (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  tags text[],
+  ingredients jsonb,
+  notes text,
+  rating int,
+  photo_url text,
+  instructions text[],
+  prep_time_minutes int not null check (prep_time_minutes > 0 and prep_time_minutes <= 1440),
+  servings smallint not null check (servings > 0 and servings <= 64),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- 2) Trigger para updated_at
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_recipes_updated_at
+before update on public.recipes
+for each row
+execute function set_updated_at();
+
+-- 3) Insertar 30 recetas
+insert into public.recipes
+(title, description, tags, ingredients, notes, rating, photo_url, instructions, prep_time_minutes, servings)
+values
+-- 1
+('Ensalada César','Clásica ensalada con pollo y aderezo',
+ ARRAY['ensalada','pollo','rapido'],
+ ARRAY['200 g lechuga','150 g pollo','50 g queso parmesano'],
+ 'Aderezo César al gusto',5,null,
+ ARRAY['Lava y corta la lechuga','Dora el pollo en sartén','Mezcla con aderezo','Agrega crutones y parmesano'],15,2),
+
+-- 2
+('Pasta al pesto','Rápida y sabrosa',
+ ARRAY['pasta','italiana','rapido'],
+ ARRAY['180 g pasta','3 cda pesto'],
+ 'Usa pesto fresco',5,null,
+ ARRAY['Cuece la pasta en agua con sal','Tuesta piñones','Tritura albahaca, ajo, queso y piñones','Mezcla pasta con pesto'],20,2),
+
+-- 3
+('Tortilla de patatas','Clásico español',
+ ARRAY['huevo','patata','tradicional'],
+ ARRAY['500 g patata','4 ud huevo','1 ud cebolla'],
+ 'Mejor jugosa',5,null,
+ ARRAY['Pela y corta patatas','Fríe con cebolla','Bate huevos','Mezcla todo','Cuaja en sartén'],40,4),
+
+-- 4
+('Gazpacho','Frío y refrescante',
+ ARRAY['sopa','vegano','verano'],
+ ARRAY['700 g tomate','1 ud pepino','50 ml aceite'],
+ 'Servir muy frío',5,null,
+ ARRAY['Lava los vegetales','Tritura todo con pan y aceite','Ajusta sal y vinagre','Enfría en nevera'],20,4),
+
+-- 5
+('Paella mixta','Con pollo y mariscos',
+ ARRAY['arroz','española','marisco'],
+ ARRAY['200 g arroz','300 g pollo','200 g gambas'],
+ 'Usar caldo casero',5,null,
+ ARRAY['Sofríe carne en paellera','Agrega verduras','Añade arroz y rehoga','Vierte caldo con azafrán','Agrega mariscos','Reposar 5 min'],60,6),
+
+-- 6
+('Croquetas de jamón','Cremosas',
+ ARRAY['aperitivo','jamon','fritura'],
+ ARRAY['100 g jamón','500 ml leche','60 g harina'],
+ 'Deja enfriar la masa',4,null,
+ ARRAY['Prepara bechamel con jamón','Enfría masa 2h','Forma croquetas','Reboza','Fríe en aceite caliente'],90,6),
+
+-- 7
+('Lentejas estofadas','Tradicional',
+ ARRAY['legumbre','guiso','invierno'],
+ ARRAY['250 g lentejas','100 g chorizo','1 ud zanahoria'],
+ 'Dejar reposar antes de servir',5,null,
+ ARRAY['Sofríe verduras','Añade lentejas y caldo','Agrega chorizo','Cocina 45 min a fuego lento'],60,4),
+
+-- 8
+('Pollo al curry','Con leche de coco',
+ ARRAY['pollo','curry','india'],
+ ARRAY['300 g pollo','200 ml leche coco','1 cda curry'],
+ 'Acompaña con arroz',5,null,
+ ARRAY['Corta pollo en dados','Sofríe cebolla y especias','Añade pollo y dora','Agrega leche de coco','Cuece 20 min'],35,4),
+
+-- 9
+('Pizza margarita','Clásica italiana',
+ ARRAY['pizza','horno','italiana'],
+ ARRAY['250 g masa','150 g queso','100 g tomate'],
+ 'Hornear en piedra',4,null,
+ ARRAY['Prepara masa y reposa','Extiende y añade salsa','Agrega mozzarella','Hornea 12 min a 220C'],90,2),
+
+-- 10
+('Canelones','Rellenos de carne',
+ ARRAY['pasta','horno','italiana'],
+ ARRAY['12 ud placas','200 g carne','200 ml bechamel'],
+ 'Congela bien',5,null,
+ ARRAY['Prepara relleno','Cuece placas','Rellena con carne','Cubre con bechamel y queso','Hornea 20 min'],70,4),
+
+-- 11
+('Crema de calabaza','Suave',
+ ARRAY['sopa','invierno','vegetariano'],
+ ARRAY['600 g calabaza','1 ud zanahoria','500 ml caldo'],
+ 'Decora con pipas',4,null,
+ ARRAY['Pela y corta calabaza','Sofríe cebolla','Añade caldo','Cuece 20 min','Tritura y sirve'],30,4),
+
+-- 12
+('Arroz a la cubana','Con plátano',
+ ARRAY['arroz','huevo','rapido'],
+ ARRAY['150 g arroz','1 ud huevo','1 ud plátano'],
+ 'Sirve con tomate frito',4,null,
+ ARRAY['Cuece arroz','Fríe huevo','Fríe plátano','Monta el plato'],25,2),
+
+-- 13
+('Fideuá','Con marisco',
+ ARRAY['marisco','valenciana','fideos'],
+ ARRAY['200 g fideos','150 g sepia','200 ml caldo pescado'],
+ 'Servir con alioli',5,null,
+ ARRAY['Sofríe sepia y gambas','Agrega fideos y rehoga','Añade caldo caliente','Cuece 10 min','Reposar 5 min'],40,4),
+
+-- 14
+('Empanada gallega','De atún',
+ ARRAY['empanada','horno','gallega'],
+ ARRAY['300 g masa','2 ud latas atún','100 g pimiento'],
+ 'Reposa antes de cortar',5,null,
+ ARRAY['Prepara masa','Sofríe verduras y atún','Rellena y cubre','Hornea 40 min'],120,6),
+
+-- 15
+('Fabada','Asturiana',
+ ARRAY['legumbre','guiso','tradicional'],
+ ARRAY['300 g fabes','1 ud chorizo','1 ud morcilla'],
+ 'Deja reposar 15 min',5,null,
+ ARRAY['Remoja fabes la noche anterior','Cuece fabes con agua fría','Agrega embutidos','Cuece 2h a fuego lento'],180,6),
+
+-- 16
+('Huevos rotos','Con jamón',
+ ARRAY['huevo','patata','rapido'],
+ ARRAY['300 g patatas','2 ud huevos','50 g jamón'],
+ 'Romper justo al servir',4,null,
+ ARRAY['Fríe patatas','Fríe huevos','Coloca huevos sobre patatas','Rompe y añade jamón'],25,2),
+
+-- 17
+('Ratatouille','Francés',
+ ARRAY['verduras','horno','francia'],
+ ARRAY['1 ud calabacín','1 ud berenjena','1 ud pimiento'],
+ 'Usa salsa de tomate',4,null,
+ ARRAY['Corta verduras en rodajas','Sofríe cebolla y ajo','Coloca en fuente con salsa','Hornea 40 min'],60,4),
+
+-- 18
+('Chili con carne','Tex-Mex',
+ ARRAY['carne','picante','mexico'],
+ ARRAY['200 g carne picada','200 g alubias','100 g tomate'],
+ 'Ajusta picante',5,null,
+ ARRAY['Sofríe cebolla y pimiento','Agrega carne','Añade tomate y especias','Incorpora alubias','Cuece 30 min'],50,4),
+
+-- 19
+('Tacos de pollo','Mexicanos',
+ ARRAY['pollo','mexico','rapido'],
+ ARRAY['200 g pollo','6 ud tortillas','50 g salsa'],
+ 'Calienta tortillas',4,null,
+ ARRAY['Cocina pollo y desmenúzalo','Calienta tortillas','Rellena con pollo y salsa','Sirve con cilantro'],25,3),
+
+-- 20
+('Couscous marroquí','Con verduras',
+ ARRAY['couscous','vegano','legumbre'],
+ ARRAY['200 g couscous','100 g zanahoria','100 g calabacín'],
+ 'Deja reposar 5 min tras hidratar',4,null,
+ ARRAY['Hidrata el couscous con caldo','Sofríe verduras','Mezcla todo','Sirve caliente'],30,4),
+
+-- 21
+('Hamburguesa casera','Clásica',
+ ARRAY['carne','pan','fastfood'],
+ ARRAY['200 g ternera','1 ud pan','30 g queso'],
+ 'Tuesta el pan',4,null,
+ ARRAY['Forma hamburguesa','Cocina a la plancha','Tuesta pan','Monta la hamburguesa'],25,2),
+
+-- 22
+('Sushi rolls','Japoneses',
+ ARRAY['arroz','pescado','japon'],
+ ARRAY['200 g arroz sushi','2 ud alga nori','100 g salmon'],
+ 'Moja cuchillo para cortar',5,null,
+ ARRAY['Cuece arroz con vinagre','Coloca alga y arroz','Agrega relleno','Enrolla y corta'],60,4),
+
+-- 23
+('Pollo asado','Al horno',
+ ARRAY['pollo','horno','tradicional'],
+ ARRAY['1 ud pollo','2 ud patata','1 ud limón'],
+ 'Deja reposar antes de cortar',5,null,
+ ARRAY['Limpia el pollo','Sazona con especias','Coloca en bandeja con patatas','Hornea 90 min'],100,5),
+
+-- 24
+('Quiche Lorraine','Tarta salada',
+ ARRAY['huevo','horno','francia'],
+ ARRAY['200 g masa brisa','100 g bacon','100 g queso'],
+ 'Servir tibia',5,null,
+ ARRAY['Forra molde con masa','Bate huevos con nata','Agrega bacon y queso','Hornea 30 min'],50,6),
+
+-- 25
+('Pad Thai','Tailandés',
+ ARRAY['noodles','tailandia','salteado'],
+ ARRAY['200 g noodles arroz','100 g camarones','50 g brotes soja'],
+ 'Sirve con lima',5,null,
+ ARRAY['Hidrata noodles','Sofríe camarones y huevo','Añade noodles y salsa','Agrega brotes y cacahuetes'],35,2),
+
+-- 26
+('Ravioli de ricotta','Pasta fresca',
+ ARRAY['pasta','italiana','queso'],
+ ARRAY['200 g harina','100 g ricotta','50 g espinaca'],
+ 'Sellar bien los bordes',5,null,
+ ARRAY['Prepara masa','Haz relleno','Forma raviolis','Cuece 3 min','Sirve con salsa'],70,4),
+
+-- 27
+('Brownie','De chocolate',
+ ARRAY['postre','chocolate','horno'],
+ ARRAY['200 g chocolate','120 g mantequilla','3 ud huevos'],
+ 'No sobrehornear',5,null,
+ ARRAY['Funde mantequilla y chocolate','Mezcla con azúcar y huevos','Agrega harina','Hornea 25 min','Enfría y corta'],45,8),
+
+-- 28
+('Tarta de queso','Cremosa',
+ ARRAY['postre','queso','horno'],
+ ARRAY['300 g queso crema','2 ud huevos','100 g azúcar'],
+ 'Enfriar antes de cortar',5,null,
+ ARRAY['Tritura galletas y mantequilla','Bate queso con huevos y azúcar','Hornea 50 min','Enfría 4h en nevera'],70,10),
+
+-- 29
+('Crepes salados','Versátiles',
+ ARRAY['crepes','brunch','rapido'],
+ ARRAY['120 g harina','250 ml leche','2 ud huevos'],
+ 'Rellenar al gusto',4,null,
+ ARRAY['Mezcla ingredientes','Calienta sartén','Cocina crepes','Rellena y sirve'],25,3),
+
+-- 30
+('Shakshuka','Huevos en tomate',
+ ARRAY['huevo','tomate','brunch'],
+ ARRAY['3 ud huevos','300 g tomate triturado','1 ud pimiento'],
+ 'Sirve con pan',5,null,
+ ARRAY['Sofríe verduras','Agrega tomate','Haz huecos y casca huevos','Cocina a fuego lento','Sirve caliente'],35,3);
