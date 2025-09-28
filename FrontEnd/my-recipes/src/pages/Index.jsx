@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card"; // ✅ Importado correctamente
+import { Card } from "@/components/ui/card";
 import { Plus, ChefHat } from "lucide-react";
 import { RecipeCard } from "@/components/RecipeCard";
-import { RecipeForm } from "@/components/RecipeForm";
+import { RecipeForm } from "@/components/RecipeForm"; // <-- si export default: usa `import RecipeForm from ...`
 import { RecipeDetail } from "@/components/RecipeDetail";
 import { SearchBar } from "@/components/SearchBar";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -42,16 +42,52 @@ export default function Index() {
 
   const [showApiStatus, setShowApiStatus] = useState(false);
 
+  // --- helpers de normalización (no causan HMR) ---
+  const normString = (v) => (v == null ? "" : String(v));
+  const normArrayFromCSV = (v) =>
+    Array.isArray(v)
+      ? v.map((s) => String(s).trim()).filter(Boolean)
+      : normString(v).split(",").map((s) => s.trim()).filter(Boolean);
+  const normArrayFromLines = (v) =>
+    Array.isArray(v)
+      ? v.map((s) => String(s).trim()).filter(Boolean)
+      : normString(v).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+
+  // --- helpers de datos ---
+  const refreshTags = async () => {
+    try {
+      const tags = await getAllTags();
+      setAllTags(tags);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const reload = async ({ resetPage = false } = {}) => {
+    try {
+      setLoading(true);
+      const nextPage = resetPage ? 1 : page;
+      if (resetPage && page !== 1) setPage(1);
+
+      const { rows, count } = await listRecipes({
+        q: searchQuery,
+        tags: activeTags,
+        page: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+
+      setRecipes(rows);
+      setTotal(count);
+    } catch (e) {
+      toast({ title: "Error recargando recetas", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // cargar tags una vez
   useEffect(() => {
-    (async () => {
-      try {
-        const tags = await getAllTags();
-        setAllTags(tags);
-      } catch (e) {
-        console.error(e);
-      }
-    })();
+    void refreshTags();
   }, []);
 
   // cargar recetas cuando cambian filtros/página
@@ -75,7 +111,9 @@ export default function Index() {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false };
+    return () => {
+      alive = false;
+    };
   }, [searchQuery, activeTags, page]);
 
   const filteredRecipes = useMemo(() => recipes, [recipes]);
@@ -83,28 +121,29 @@ export default function Index() {
   // Handlers
   const handleSubmit = async (data) => {
     const payload = {
-      id: editingRecipe?.id,
+      id: editingRecipe?.id ?? data.id ?? null,
       title: data.title,
       description: data.description || null,
-      tags: data.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      ingredients: data.ingredients?.split("\n").map(s => s.trim()).filter(Boolean) ?? null,
+
+      // soporta string o array; prioriza *_array si viene del form
+      tags: Array.isArray(data.tags_array) ? data.tags_array : normArrayFromCSV(data.tags),
+      ingredients: Array.isArray(data.ingredients_array) ? data.ingredients_array : normArrayFromLines(data.ingredients),
+      instructions: Array.isArray(data.instructions_array) ? data.instructions_array : normArrayFromLines(data.instructions),
+
       notes: data.notes || null,
-      rating: data.rating ?? null,
-      photo_url: data.photo || null,
-      instructions: (data.instructions || "")
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      rating: typeof data.rating === "number" ? data.rating : Number(data.rating ?? 0),
+      photo_url: data.photo_url || null,
       prep_time_minutes: Number(data.prep_time_minutes || 20),
       servings: Number(data.servings || 2),
     };
 
     try {
-      const id = await upsertRecipe(payload);
+      await upsertRecipe(payload); // si update, asegúrate que hace .update().eq('id', ...) o upsert con onConflict('id')
       toast({ title: editingRecipe ? "¡Receta actualizada!" : "¡Receta creada!" });
+      await reload({ resetPage: true });
+      await refreshTags();
       setView("list");
       setEditingRecipe(null);
-      setPage(1);
     } catch (e) {
       toast({ title: "Error al guardar", description: e.message, variant: "destructive" });
     }
@@ -125,8 +164,8 @@ export default function Index() {
     try {
       await deleteRecipe(deleteDialog.recipe.id);
       toast({ title: "Receta eliminada", description: `"${deleteDialog.recipe.title}" eliminada.` });
-      setRecipes((prev) => prev.filter((r) => r.id !== deleteDialog.recipe.id));
-      setTotal((t) => Math.max(0, t - 1));
+      await reload();
+      await refreshTags();
     } catch (e) {
       toast({ title: "Error al borrar", description: e.message, variant: "destructive" });
     } finally {
@@ -150,8 +189,14 @@ export default function Index() {
     setSelectedRecipe(null);
   };
 
-  const onSearch = (q) => { setPage(1); setSearchQuery(q); };
-  const onTagFilter = (tags) => { setPage(1); setActiveTags(tags); };
+  const onSearch = (q) => {
+    setPage(1);
+    setSearchQuery(q);
+  };
+  const onTagFilter = (tags) => {
+    setPage(1);
+    setActiveTags(tags);
+  };
 
   if (view === "form") {
     return (
@@ -217,12 +262,7 @@ export default function Index() {
       {/* Main */}
       <div className="container mx-auto px-4 py-12">
         <div className="mb-12">
-          <SearchBar
-            onSearch={onSearch}
-            onTagFilter={onTagFilter}
-            availableTags={allTags}
-            activeTags={activeTags}
-          />
+          <SearchBar onSearch={onSearch} onTagFilter={onTagFilter} availableTags={allTags} activeTags={activeTags} />
         </div>
 
         <div className="flex items-center justify-between mb-8">
@@ -233,9 +273,7 @@ export default function Index() {
                 : `${filteredRecipes.length} ${filteredRecipes.length === 1 ? "Receta Encontrada" : "Recetas Encontradas"}`}
             </h2>
             <p className="text-muted-foreground mt-1">
-              {filteredRecipes.length === 0
-                ? "No se encontraron recetas con los filtros aplicados"
-                : `Total en base de datos: ${total}`}
+              {filteredRecipes.length === 0 ? "No se encontraron recetas con los filtros aplicados" : `Total en base de datos: ${total}`}
             </p>
           </div>
           <Button onClick={() => setView("form")} className="bg-gradient-warm text-primary-foreground hover:opacity-90 shadow-warm">
@@ -250,13 +288,7 @@ export default function Index() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe.id}
-                  recipe={recipe}
-                  onEdit={handleEdit}
-                  onDelete={() => handleDelete(recipe.id)}
-                  onView={handleView}
-                />
+                <RecipeCard key={recipe.id} recipe={recipe} onEdit={handleEdit} onDelete={() => handleDelete(recipe.id)} onView={handleView} />
               ))}
             </div>
 
