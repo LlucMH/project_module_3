@@ -32,7 +32,7 @@ export default function RecipePage() {
     if (!confirm('¿Eliminar esta receta?')) return
     const { error } = await supabase.from('recipes').delete().eq('id', id)
     if (error) return alert(error.message)
-    navigate('/') // volver a la lista
+    navigate('/') 
   }
 
   if (loading) return <div style={{padding:16}}>Cargando…</div>

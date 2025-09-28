@@ -8,7 +8,7 @@ const empty = {
   photo_url: '',
   prep_time_minutes: 20,
   servings: 2,
-  instructionsText: '' // textarea; lo convertimos a array
+  instructionsText: ''
 }
 
 export default function EditPage() {

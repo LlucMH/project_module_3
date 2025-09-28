@@ -1,4 +1,3 @@
-// src/api/recipes.ts
 import { supabase } from "@/lib/supabase"
 
 export type Recipe = {
@@ -34,11 +33,9 @@ export async function listRecipes({
     .range(from, to)
 
   if (q.trim()) {
-    // busca en título o descripción
     query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
   }
   if (tags.length) {
-    // text[] contiene todos los tags seleccionados
     query = query.contains("tags", tags)
   }
 
