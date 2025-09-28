@@ -112,16 +112,16 @@ Rel(apiSvc, supabaseClient, "usa")
 
 #### Mapa de navegación (rutas/estados UI)
 ```mermaid
-flowchart LR
+flowchart
   A[Lista de recetas] -->|click en tarjeta| B[Detalle de receta]
-  A -->|Crear receta| C[Formulario (crear)]
-  B -->|Editar| D[Formulario (editar)]
+  A -->|Crear receta| C[Formulario crear]
+  B -->|Editar| D[Formulario editar]
   B -->|Borrar| E[Diálogo confirmación]
   C -->|Guardar OK| A
   D -->|Guardar OK| B
   E -->|Confirmar| A
   A -->|Buscar/Filtrar| A
-  A -.->|Botón "API Status"| F[Panel desplegable Health]
+  A -.->|Botón API Status| F[Panel desplegable Health]
 ``` 
 
 #### Secuencia — Listar recetas
